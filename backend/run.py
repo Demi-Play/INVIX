@@ -1,5 +1,14 @@
 import uvicorn
-from .app.main import app, debug, port, host
+
+from app.core.settings import settings
+
+def main() -> None:
+    uvicorn.run(
+        "app.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug
+    )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=host, port=port, debug=debug)
+    main()

@@ -1,7 +1,8 @@
-from date import datetime
-from typing import Optional
-from sqlmodel import SQLModel, Field, Session, create_engine
 import os
+from datetime import datetime
+
+from sqlmodel import Field, Session, SQLModel, create_engine
+
 
 ### Models
 #
@@ -17,13 +18,12 @@ class Product(SQLModel, table=True):
 #
 #
 debug = os.getenv("DEBUG")
-pg_url = os.getenv("PG_URL", "postgresql+psycopg://postgres:root@localhost:5432/invix_db")
-engine = create_engine(pg_url, echo=debug)
+pg_url = os.getenv("PG_URL", "postgresql+psycopg2://postgres:root@localhost:5432/invix_db")
+engine = create_engine(url=str(pg_url), echo=debug)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
 
-engine = create_engine()
 # для добавления сессии в эндпоинты
 def get_session():
     with Session(engine) as session:

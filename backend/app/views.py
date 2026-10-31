@@ -1,11 +1,10 @@
-from datetime import datetime
+from fastapi import APIRouter, Depends
+from fastapi.exceptions import HTTPException
 from sqlmodel import select
-from .models import get_session, Product
 
-from fastapi import ApiRouter
+from .models import Product, Session, get_session
 
-
-router = ApiRouter('/catalog')
+router = APIRouter()
 
 @router.get("/")
 def get_catalog():

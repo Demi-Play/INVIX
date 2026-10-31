@@ -1,6 +1,7 @@
 fastapi
 sqlmodel
-psycopg # 2-binary
+psycopg2-binary
 uvicorn
 scalar
 python-dotenv
+pydantic-settings
