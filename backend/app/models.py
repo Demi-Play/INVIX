@@ -1,30 +1,14 @@
-import os
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlmodel import Field, Session, SQLModel, create_engine
+from sqlmodel import Field, SQLModel
 
 
 ### Models
-#
-#
 class Product(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     name: str
     image_key: str
-    created_at: datetime = Field(default_factory=datetime.now)
+    # aware UTC datetime — sqlmodel 2.1 не принимает naive-даты
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-
-### DB
-#
-#
-debug = os.getenv("DEBUG")
-pg_url = os.getenv("PG_URL", "postgresql+psycopg2://postgres:root@localhost:5432/invix_db")
-engine = create_engine(url=str(pg_url), echo=debug)
-
-def init_db():
-    SQLModel.metadata.create_all(engine)
-
-# для добавления сессии в эндпоинты
-def get_session():
-    with Session(engine) as session:
-        yield session
+# Позже добавлю юзера для имитации корзины и саму корзину
