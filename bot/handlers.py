@@ -14,6 +14,7 @@ from aiogram.types import (
     WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiohttp import FormData
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -55,12 +56,20 @@ class PhotoFilter(BaseFilter):
 
 
 async def create_product_in_backend(name: str, image_bytes: bytes) -> dict:
+    form = FormData()
+    form.add_field("name", name)
+    form.add_field(
+        "image",
+        io.BytesIO(image_bytes),
+        filename="product.jpg",
+        content_type="image/jpeg",
+    )
+
     async with (
         aiohttp.ClientSession() as session,
         session.post(
             f"{settings.backend_url.rstrip('/')}/product/upload/",
-            data={"name": name},
-            files={"image": ("product.jpg", io.BytesIO(image_bytes), "image/jpeg")},
+            data=form,
             timeout=aiohttp.ClientTimeout(total=30),
         ) as response,
     ):
