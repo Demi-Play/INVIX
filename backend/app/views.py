@@ -1,9 +1,17 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlmodel import Session, select
 
+from .core import storage
 from .core.db import get_session
 from .models import Product
 from .schemas import ProductCreate
+
+# ошибся в написании, 2 раза запускал с ошибкой
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -47,3 +55,30 @@ def delete_product(product_id: int, session: Session = Depends(get_session)):
 
 
 # редактировать не делал, в тз не было требования
+
+
+# healthcheck для docker compose: проверяем БД и доступность bucket в MinIO
+@router.get("/health", include_in_schema=False)
+def health(session: Session = Depends(get_session)):
+    checks: dict[str, str] = {}
+
+    try:
+        session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:
+        logger.exception("Healthcheck: база данных недоступна")
+        checks["database"] = "error"
+
+    try:
+        checks["storage"] = "ok" if storage.bucket_exists() else "bucket missing"
+    except Exception:
+        logger.exception("Healthcheck: объектное хранилище недоступно")
+        checks["storage"] = "error"
+
+    healthy = all(value == "ok" for value in checks.values())
+    return JSONResponse(
+        status_code=status.HTTP_200_OK
+        if healthy
+        else status.HTTP_503_SERVICE_UNAVAILABLE,
+        content={"status": "ok" if healthy else "unhealthy", "checks": checks},
+    )

@@ -6,7 +6,9 @@ from .settings import settings
 ### DB
 
 # engine per process, в умных интернетах нашел)
-engine = create_engine(url=settings.pg_url, echo=settings.debug, pool_pre_ping=True)
+engine = create_engine(
+    url=settings.database_url, echo=settings.debug, pool_pre_ping=True
+)
 
 
 def init_db():

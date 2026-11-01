@@ -31,16 +31,16 @@ app = FastAPI(
 # aauth будет через Telegram initData в заголовке
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins.split(","),
+    allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ошибка БД — клиенту отдаём 503 без деталей, traceback пишем в лог
+# ошибка БД — клиенту отдает 503 без деталей, traceback пишем в лог
 @app.exception_handler(SQLAlchemyError)
-def handle_db_error(request: Request):
+def handle_db_error(request: Request, exc: SQLAlchemyError):
     loger.exception("Ошибка БД на %s", request.url.path)
     return JSONResponse(status_code=503, content={"detail": "БД недоступна"})
 
