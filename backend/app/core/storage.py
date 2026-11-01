@@ -1,5 +1,6 @@
 from datetime import timedelta
 from functools import lru_cache
+from io import BytesIO
 
 from minio import Minio
 
@@ -11,7 +12,7 @@ def build_client(endpoint: str) -> Minio:
     if not settings.minio_access_key or not settings.minio_secret_key:
         raise RuntimeError("MINIO_ACCESS_KEY и MINIO_SECRET_KEY должны быть заданы")
     return Minio(
-        endpoint,
+        endpoint=endpoint,
         access_key=settings.minio_access_key,
         secret_key=settings.minio_secret_key,
         secure=settings.minio_secure,
@@ -33,6 +34,19 @@ def get_public_client() -> Minio:
 
 def bucket_exists() -> bool:
     return get_client().bucket_exists(settings.minio_bucket)
+
+
+def upload_object(
+    object_name: str, data: bytes, content_type: str = "application/octet-stream"
+) -> None:
+    client = get_client()
+    client.put_object(
+        bucket_name=settings.minio_bucket,
+        object_name=object_name,
+        data=BytesIO(data),
+        length=len(data),
+        content_type=content_type,
+    )
 
 
 def presigned_url(object_name: str, expires: timedelta | None = None) -> str:

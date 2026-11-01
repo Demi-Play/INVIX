@@ -6,3 +6,4 @@ scalar-fastapi==1.9.1
 pydantic-settings==2.16.2
 minio==7.2.20
 python-dotenv==1.2.4
+python-multipart==0.0.20

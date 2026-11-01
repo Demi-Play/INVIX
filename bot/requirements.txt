@@ -1,3 +1,4 @@
 aiogram==3.31.0
 pydantic-settings==2.16.2
 python-dotenv==1.2.4
+minio==7.2.20

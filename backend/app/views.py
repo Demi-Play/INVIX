@@ -1,6 +1,7 @@
 import logging
+import uuid as uuid_lib
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 from sqlmodel import Session, select
@@ -27,6 +28,31 @@ def get_catalog(session: Session = Depends(get_session)):
 @router.post("/product/", response_model=Product)
 def create_product(product: ProductCreate, session: Session = Depends(get_session)):
     db_product = Product.model_validate(product)
+    session.add(db_product)
+    session.commit()
+    session.refresh(db_product)
+    return db_product
+
+
+# загрузить фото в minio и создать товар через multipartformdataa (name + image)
+@router.post("/product/upload/", response_model=Product)
+def upload_product(
+    name: str = Form(...),
+    image: UploadFile = File(...),
+    session: Session = Depends(get_session),
+):
+    image_bytes = image.file.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Фото пустое")
+
+    object_name = f"products/{uuid_lib.uuid4().hex}.jpg"
+    storage.upload_object(
+        object_name,
+        image_bytes,
+        content_type=image.content_type or "image/jpeg",
+    )
+
+    db_product = Product(name=name, image_key=object_name)
     session.add(db_product)
     session.commit()
     session.refresh(db_product)

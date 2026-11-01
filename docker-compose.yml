@@ -1,0 +1,157 @@
+name: invix
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - invix
+
+  # named volume создаётся от root, MinIO запускаем от непривилегированного uid
+  minio-volume-init:
+    image: alpine:3.22
+    restart: "no"
+    command: ["sh", "-c", "chown -R 1000:1000 /data"]
+    volumes:
+      - minio_data:/data
+    networks:
+      - invix
+
+  minio:
+    image: elestio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    user: "1000:1000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    depends_on:
+      minio-volume-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - invix
+
+  # bucket создаётся один раз после старта
+  minio-init:
+    image: elestio/minio:latest
+    restart: "no"
+    user: "1000:1000"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_BUCKET: ${MINIO_BUCKET:?MINIO_BUCKET is required}
+      MC_CONFIG_DIR: /tmp/mc
+      HOME: /tmp
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$MINIO_BUCKET" &&
+        mc anonymous set none "local/$$MINIO_BUCKET" &&
+        echo "bucket $$MINIO_BUCKET is ready"
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - invix
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DEBUG: ${DEBUG:-false}
+      HOST: 0.0.0.0
+      PORT: 5000
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      PG_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      PG_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      # backend ходит в minio по докер хостнейму
+      MINIO_ENDPOINT: minio:9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_BUCKET: ${MINIO_BUCKET:?MINIO_BUCKET is required}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_SECURE: ${MINIO_SECURE:-false}
+      MINIO_PRESIGN_EXPIRES_SECONDS: ${MINIO_PRESIGN_EXPIRES_SECONDS:-3600}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    networks:
+      - invix
+
+  frontend:
+    build:
+      context: ./frontend/app
+    restart: unless-stopped
+    environment:
+      # nginx
+      BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-http://backend:5000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:8080"
+    networks:
+      - invix
+
+  bot:
+    build:
+      context: ./bot
+    restart: unless-stopped
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
+      MINI_APP_URL: ${MINI_APP_URL:-http://localhost:3000}
+      BACKEND_URL: http://backend:5000
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Telegram user id с доступом к админ-функциям (через запятую — несколько)
+      ADMIN_IDS: ${ADMIN_IDS:-}
+    extra_hosts:
+      # вынужденная мера, пока на локалке
+      - "api.telegram.org:${TELEGRAM_API_IP:-149.154.166.110}"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - invix
+
+volumes:
+  postgres_data:
+  minio_data:
+
+networks:
+  invix:
+    driver: bridge
