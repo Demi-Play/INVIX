@@ -17,30 +17,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def product_to_dict(product: Product) -> dict:
+    data = product.model_dump()
+    data["image_url"] = (
+        storage.presigned_url(product.image_key) if product.image_key else None
+    )
+    return data
+
+
 # получить все products
-@router.get("/", response_model=list[Product])
-def get_catalog(session: Session = Depends(get_session)):
+@router.get("/")
+def get_catalog(session: Session = Depends(get_session)) -> list[dict]:
     products = session.exec(select(Product)).all()
-    return products
+    return [product_to_dict(product) for product in products]
 
 
 # создать prdouct
-@router.post("/product/", response_model=Product)
-def create_product(product: ProductCreate, session: Session = Depends(get_session)):
+@router.post("/product/")
+def create_product(
+    product: ProductCreate, session: Session = Depends(get_session)
+) -> dict:
     db_product = Product.model_validate(product)
     session.add(db_product)
     session.commit()
     session.refresh(db_product)
-    return db_product
+    return product_to_dict(db_product)
 
 
-# загрузить фото в minio и создать товар через multipartformdataa (name + image)
-@router.post("/product/upload/", response_model=Product)
+# загрузить фото в minio и создать товар через multipart form (name + image)
+@router.post("/product/upload/")
 def upload_product(
     name: str = Form(...),
     image: UploadFile = File(...),
     session: Session = Depends(get_session),
-):
+) -> dict:
     image_bytes = image.file.read()
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Фото пустое")
@@ -56,12 +66,12 @@ def upload_product(
     session.add(db_product)
     session.commit()
     session.refresh(db_product)
-    return db_product
+    return product_to_dict(db_product)
 
 
 # получить product по ID
-@router.get("/product/{product_id}", response_model=Product)
-def get_product(product_id: int, session: Session = Depends(get_session)):
+@router.get("/product/{product_id}")
+def get_product(product_id: int, session: Session = Depends(get_session)) -> dict:
     request = select(Product).where(Product.id == product_id)
     product = session.exec(request).first()
     if product is None:

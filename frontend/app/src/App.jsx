@@ -33,7 +33,8 @@ function ProductCard({ product }) {
       </div>
       <div className="card-body">
         <h2>{product.name}</h2>
-        <span className="card-key">{product.image_key}</span>
+        {/* закоментил для отладки на всякий */}
+        {/* <span className="card-key">{product.image_key}</span>*/}
         {product.created_at && (
           <time className="card-date" dateTime={product.created_at}>
             {new Date(product.created_at).toLocaleDateString('ru-RU')}
