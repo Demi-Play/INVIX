@@ -5,19 +5,17 @@ server {
     root /app/html;
     index index.html;
 
-    # файлы Vite содержат хэш в имени — их можно кэшировать надолго
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
         try_files $uri =404;
     }
 
-    # SPA: любой маршрут отдаёт index.html
     location / {
         try_files $uri $uri/ /index.html;
     }
 
-    # backend доступен по тому же origin: и сайту, и Telegram Mini App
+    # backend доступен по тому же origin и сайту, и тг мини апсам
     location /api/ {
         proxy_pass ${BACKEND_UPSTREAM}/;
         proxy_http_version 1.1;
