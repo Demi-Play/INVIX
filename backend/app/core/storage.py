@@ -29,7 +29,7 @@ def get_client() -> Minio:
 @lru_cache
 def get_public_client() -> Minio:
     """Клиент для подписи URL, которые открывает браузер (публичный endpoint)."""
-    return build_client(settings.minio_public_endpoint)
+    return build_client(settings.minio_public_base_url)
 
 
 def bucket_exists() -> bool:
@@ -52,8 +52,14 @@ def upload_object(
 def presigned_url(object_name: str, expires: timedelta | None = None) -> str:
     if expires is None:
         expires = timedelta(seconds=settings.minio_presign_expires_seconds)
-    return get_public_client().presigned_get_object(
+    url = get_public_client().presigned_get_object(
         settings.minio_bucket,
         object_name,
         expires=expires,
     )
+    # публичный адрес через nginx: /storage/<bucket>/<key>
+    storage_prefix = f"/storage/{settings.minio_bucket}/"
+    bucket_prefix = f"/{settings.minio_bucket}/"
+    if bucket_prefix in url:
+        url = url.replace(bucket_prefix, storage_prefix, 1)
+    return url

@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # endpoint, по которому backend ходит в MinIO (внутри docker-сети)
     minio_endpoint: str = "localhost:9000"
     # endpoint, который доступен браузеру; используется только для presigned URL
-    minio_public_endpoint: str = "localhost:9000"
+    minio_public_base_url: str = "http://localhost:3000"
     minio_access_key: str = ""
     minio_secret_key: str = ""
     minio_bucket: str = "invix"

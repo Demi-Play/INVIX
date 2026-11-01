@@ -17,10 +17,11 @@ ENV BACKEND_UPSTREAM=http://backend:5000
 
 RUN addgroup -g 1001 app \
     && adduser -u 1001 -G app -D -H -s /sbin/nologin app \
-    && sed -i 's|^user  nginx;|# контейнер запускается от непривилегированного app|' /etc/nginx/nginx.conf \
-    && sed -i 's|^pid        /run/nginx.pid;|pid        /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+    && sed -i 's|^user  nginx;|# user disabled|' /etc/nginx/nginx.conf \
+    && sed -i 's|^pid        /run/nginx.pid;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
     && rm -f /etc/nginx/conf.d/default.conf \
-    && chown -R app:app /var/cache/nginx /etc/nginx/conf.d
+    && mkdir -p /tmp/nginx \
+    && chown -R app:app /var/cache/nginx /etc/nginx/conf.d /var/log/nginx /tmp/nginx
 
 WORKDIR /app
 

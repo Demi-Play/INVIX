@@ -102,6 +102,7 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:?MINIO_BUCKET is required}
       MINIO_REGION: ${MINIO_REGION:-us-east-1}
       MINIO_SECURE: ${MINIO_SECURE:-false}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:-https://localhost:80}
       MINIO_PRESIGN_EXPIRES_SECONDS: ${MINIO_PRESIGN_EXPIRES_SECONDS:-3600}
     depends_on:
       postgres:
@@ -120,11 +121,12 @@ services:
     environment:
       # nginx
       BACKEND_UPSTREAM: ${BACKEND_UPSTREAM:-http://backend:5000}
+      MINIO_UPSTREAM: ${MINIO_UPSTREAM:-http://minio:9000}
     depends_on:
       backend:
         condition: service_healthy
     ports:
-      - "${FRONTEND_PORT:-3000}:8080"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:8080"
     networks:
       - invix
 
