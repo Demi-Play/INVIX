@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     backend_url: str = "http://127.0.0.1:5000"
     log_level: str = "INFO"
 
-    # Telegram user id с доступом к админ-функциям (через запятую — несколько)
+    # Telegram user id с доступом к админ-функциям (через запятую - несколько)
     admin_ids: str = ""
 
     model_config = SettingsConfigDict(

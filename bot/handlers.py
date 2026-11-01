@@ -155,7 +155,7 @@ async def create_product(message: Message, bot: Bot) -> None:
 
     caption = (message.caption or "").strip()
     if not caption:
-        await message.reply("Подпишите фото — так будет название товара.")
+        await message.reply("Подпишите фото - так будет название товара.")
         return
 
     photo = message.photo[-1]

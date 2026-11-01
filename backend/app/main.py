@@ -38,7 +38,7 @@ app.add_middleware(
 )
 
 
-# ошибка БД — клиенту отдает 503 без деталей, traceback пишем в лог
+# ошибка БД - клиенту отдает 503 без деталей, traceback пишем в лог
 @app.exception_handler(SQLAlchemyError)
 def handle_db_error(request: Request, exc: SQLAlchemyError):
     loger.exception("Ошибка БД на %s", request.url.path)

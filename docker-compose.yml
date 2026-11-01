@@ -137,7 +137,7 @@ services:
       MINI_APP_URL: ${MINI_APP_URL:-http://localhost:3000}
       BACKEND_URL: http://backend:5000
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      # Telegram user id с доступом к админ-функциям (через запятую — несколько)
+      # Telegram user id с доступом к админ-функциям (через запятую - несколько)
       ADMIN_IDS: ${ADMIN_IDS:-}
     extra_hosts:
       # вынужденная мера, пока на локалке
